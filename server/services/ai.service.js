@@ -1,37 +1,22 @@
 import OpenAI from "openai";
+import { AI_CONFIG } from "../config/ai.config.js";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_KEY
 });
 
 /**
- * Analiza el mensaje usando IA
+ * 🧠 IA DE ANÁLISIS (NO CAMBIA)
  */
 export async function analyzeWithAI(message) {
+  const config = AI_CONFIG.analysis;
+
   const response = await openai.chat.completions.create({
-    model: "gpt-4.1-mini",
-    temperature: 0.2,
+    model: config.model,
+    temperature: config.temperature,
     messages: [
-      {
-        role: "system",
-        content: `
-Eres un sistema de análisis para soporte de un casino.
-
-Debes analizar el mensaje del usuario y responder SOLO en formato JSON válido, sin texto extra.
-
-Formato:
-{
-  "intent": "payment_issue | general_question | complaint | other",
-  "urgency": number (0 a 3),
-  "complexity": number (0 a 3),
-  "sentiment": "calm | neutral | angry"
-}
-`
-      },
-      {
-        role: "user",
-        content: message
-      }
+      { role: "system", content: config.prompt },
+      { role: "user", content: message }
     ]
   });
 
@@ -39,7 +24,35 @@ Formato:
 
   try {
     return JSON.parse(content);
-  } catch (error) {
-    throw new Error("Error parseando respuesta de IA");
+  } catch {
+    throw new Error("Invalid AI JSON");
   }
+}
+
+/**
+ * 
+ * Usa un modelo diferente según el nivel
+ */
+export async function generateResponse(level, message) {
+  let config;
+
+  // 🔥 Aquí decides qué modelo usar
+  if (level === 1) {
+    config = AI_CONFIG.level1;
+  } else if (level === 2) {
+    config = AI_CONFIG.level2;
+  } else {
+    config = AI_CONFIG.level3;
+  }
+
+  const response = await openai.chat.completions.create({
+    model: config.model,
+    temperature: config.temperature,
+    messages: [
+      { role: "system", content: config.prompt },
+      { role: "user", content: message }
+    ]
+  });
+
+  return response.choices[0].message.content;
 }
